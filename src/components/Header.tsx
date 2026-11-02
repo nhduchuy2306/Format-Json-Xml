@@ -1,0 +1,94 @@
+import React from 'react';
+import { 
+  Code2, 
+  Sun, 
+  Moon, 
+  GitCompare, 
+  FileJson, 
+  FileCode 
+} from 'lucide-react';
+
+interface HeaderProps {
+  theme: 'dark' | 'light';
+  onToggleTheme: () => void;
+  onNewTab: (lang?: 'json' | 'xml') => void;
+  onOpenCompare: (lang: 'json' | 'xml') => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({
+  theme,
+  onToggleTheme,
+  onNewTab,
+  onOpenCompare,
+}) => {
+  return (
+    <header className="h-12 border-b border-border bg-surface px-4 flex items-center justify-between select-none">
+      {/* Brand */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 font-bold text-base tracking-tight text-foreground">
+          <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center text-white shadow-sm">
+            <Code2 size={18} />
+          </div>
+          <span>JSON<span className="text-blue-500">.</span>XML</span>
+          <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20">
+            PRO
+          </span>
+        </div>
+
+        <div className="h-4 w-px bg-border mx-1" />
+
+        {/* Quick Add Tab Buttons */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onNewTab('json')}
+            className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded hover:bg-surface-hover text-foreground transition-colors"
+            title="Tạo Tab JSON mới"
+          >
+            <FileJson size={14} className="text-amber-500" />
+            <span>+ JSON</span>
+          </button>
+          <button
+            onClick={() => onNewTab('xml')}
+            className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded hover:bg-surface-hover text-foreground transition-colors"
+            title="Tạo Tab XML mới"
+          >
+            <FileCode size={14} className="text-emerald-500" />
+            <span>+ XML</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Compare Buttons & Global Actions */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onOpenCompare('json')}
+          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 transition-all shadow-sm active:scale-95"
+          title="Mở tab so sánh 2 văn bản JSON (Monaco Diff)"
+        >
+          <GitCompare size={14} />
+          <span>Compare JSON</span>
+        </button>
+
+        <button
+          onClick={() => onOpenCompare('xml')}
+          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 transition-all shadow-sm active:scale-95"
+          title="Mở tab so sánh 2 văn bản XML (Monaco Diff)"
+        >
+          <GitCompare size={14} />
+          <span>Compare XML</span>
+        </button>
+
+        <div className="h-4 w-px bg-border mx-1" />
+
+        {/* Theme Toggle */}
+        <button
+          onClick={onToggleTheme}
+          className="p-1.5 rounded-md text-fg-secondary hover:text-foreground hover:bg-surface-hover transition-colors"
+          title={theme === 'dark' ? 'Chuyển sang Giao diện Sáng' : 'Chuyển sang Giao diện Tối'}
+        >
+          {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+        </button>
+      </div>
+    </header>
+  );
+};
