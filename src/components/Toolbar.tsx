@@ -12,7 +12,8 @@ import {
   FileCode,
   Layers,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  Columns
 } from 'lucide-react';
 
 interface ToolbarProps {
@@ -29,6 +30,8 @@ interface ToolbarProps {
   onUpload: () => void;
   onDownload: () => void;
   onOpenCompare: (lang: 'json' | 'xml') => void;
+  onToggleSplitView?: () => void;
+  isSplitMode?: boolean;
   fontSize: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -55,6 +58,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onUpload,
   onDownload,
   onOpenCompare,
+  onToggleSplitView,
+  isSplitMode = false,
   fontSize,
   onZoomIn,
   onZoomOut,
@@ -64,77 +69,88 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   stats,
 }) => {
   return (
-    <div className="h-10 bg-surface/50 border-b border-border px-3 flex items-center justify-between text-xs select-none gap-2 overflow-x-auto scrollbar-none">
-      {/* Left Actions */}
-      <div className="flex items-center gap-1.5 min-w-max">
+    <div className="h-10 bg-surface/50 border-b border-border px-3 flex items-center justify-between text-xs select-none gap-2">
+      {/* Left Action Icons */}
+      <div className="flex items-center gap-1.5 shrink-0">
         {!isCompareMode ? (
           <>
-            {/* Format Button (Ctrl + S) */}
+            {/* Format Icon Button (Ctrl + S) */}
             <button
               onClick={onFormat}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition-all active:scale-95"
-              title="Định dạng văn bản (Phím tắt: Ctrl + S)"
+              className="p-1.5 rounded-md font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-xs transition-all active:scale-95 flex items-center justify-center"
+              title="Format văn bản (Phím tắt: Ctrl + S)"
             >
-              <Sparkles size={14} />
-              <span>Format</span>
-              <kbd className="hidden sm:inline-block ml-1 px-1 py-0.2 bg-blue-700/60 rounded text-[10px] text-blue-100 font-mono">
-                Ctrl+S
-              </kbd>
+              <Sparkles size={15} />
             </button>
 
-            {/* Nested Format Option Toggle */}
+            {/* Nested Format Icon Toggle */}
             <button
               onClick={onToggleNested}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border transition-all ${
+              className={`p-1.5 rounded-md border transition-all relative flex items-center justify-center ${
                 enableNested
-                  ? 'bg-purple-500/15 border-purple-500/40 text-purple-600 dark:text-purple-300 font-medium'
+                  ? 'bg-purple-500/15 border-purple-500/40 text-purple-600 dark:text-purple-300'
                   : 'bg-transparent border-border text-fg-secondary hover:text-foreground hover:bg-surface-hover'
               }`}
-              title="Tự động giải mã & format các chuỗi serialized lồng nhau (Nested JSON string / CDATA XML)"
+              title="Nested Format: Tự động giải mã & format các chuỗi serialized lồng nhau"
             >
-              <Layers size={14} className={enableNested ? 'text-purple-500' : 'text-fg-secondary'} />
-              <span>Nested Format</span>
+              <Layers size={15} className={enableNested ? 'text-purple-500' : 'text-fg-secondary'} />
               <span
-                className={`w-2 h-2 rounded-full ${
-                  enableNested ? 'bg-purple-500 animate-pulse' : 'bg-gray-400'
+                className={`absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full ${
+                  enableNested ? 'bg-purple-500' : 'bg-transparent'
                 }`}
               />
             </button>
 
-            {/* Minify */}
+            {/* Minify Icon */}
             <button
               onClick={onMinify}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md hover:bg-surface-hover text-foreground transition-colors border border-transparent hover:border-border"
-              title="Nén dòng (Minify / Compact)"
+              className="p-1.5 rounded-md hover:bg-surface-hover text-fg-secondary hover:text-foreground transition-colors border border-transparent hover:border-border flex items-center justify-center"
+              title="Minify (Nén dòng dữ liệu)"
             >
-              <Minimize2 size={13} />
-              <span>Minify</span>
+              <Minimize2 size={15} />
             </button>
+
+            {/* Split Screen Icon Toggle */}
+            {onToggleSplitView && (
+              <button
+                onClick={onToggleSplitView}
+                className={`p-1.5 rounded-md border transition-all flex items-center justify-center ${
+                  isSplitMode
+                    ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-600 dark:text-cyan-300'
+                    : 'bg-transparent border-border text-fg-secondary hover:text-foreground hover:bg-surface-hover'
+                }`}
+                title={isSplitMode ? 'Quay về màn hình đơn' : 'Chia đôi màn hình'}
+              >
+                <Columns size={15} className={isSplitMode ? 'text-cyan-500' : 'text-fg-secondary'} />
+              </button>
+            )}
 
             <div className="h-4 w-px bg-border mx-1" />
 
-            {/* Language Selector */}
-            <div className="flex items-center bg-surface-hover/80 rounded-md p-0.5 border border-border">
+            {/* Language Selector (Icon-based with active indicator) */}
+            <div className="flex items-center bg-surface-hover rounded-md p-0.5 border border-border">
               <button
                 onClick={() => onLanguageChange('json')}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
+                className={`px-2 py-1 rounded flex items-center gap-1 text-[11px] transition-colors ${
                   language === 'json'
-                    ? 'bg-background text-amber-500 font-medium shadow-sm'
+                    ? 'bg-background text-amber-500 font-semibold shadow-xs'
                     : 'text-fg-secondary hover:text-foreground'
                 }`}
+                title="Định dạng JSON"
               >
-                <FileJson size={12} />
+                <FileJson size={13} />
                 <span>JSON</span>
               </button>
               <button
                 onClick={() => onLanguageChange('xml')}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
+                className={`px-2 py-1 rounded flex items-center gap-1 text-[11px] transition-colors ${
                   language === 'xml'
-                    ? 'bg-background text-emerald-500 font-medium shadow-sm'
+                    ? 'bg-background text-emerald-500 font-semibold shadow-xs'
                     : 'text-fg-secondary hover:text-foreground'
                 }`}
+                title="Định dạng XML"
               >
-                <FileCode size={12} />
+                <FileCode size={13} />
                 <span>XML</span>
               </button>
             </div>
@@ -146,11 +162,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 const val = e.target.value;
                 onIndentChange(val === 'tab' ? 'tab' : parseInt(val, 10));
               }}
-              className="bg-surface-hover border border-border rounded-md px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="bg-surface-hover border border-border rounded-md px-1.5 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
               title="Khoảng cách thụt dòng"
             >
-              <option value={2}>2 Spaces</option>
-              <option value={4}>4 Spaces</option>
+              <option value={2}>2 sp</option>
+              <option value={4}>4 sp</option>
               <option value="tab">Tab</option>
             </select>
           </>
@@ -159,18 +175,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <div className="flex items-center gap-2">
             <span className="font-semibold text-blue-500 flex items-center gap-1">
               <GitCompare size={14} />
-              <span>Chế độ So Sánh ({language.toUpperCase()})</span>
+              <span>Diff ({language.toUpperCase()})</span>
             </span>
-            <div className="text-fg-secondary text-[11px]">
-              (Bản Gốc bên trái &bull; Bản Đã Sửa bên phải &bull; Highlight khác biệt trực tiếp)
-            </div>
           </div>
         )}
       </div>
 
-      {/* Right Utilities */}
-      <div className="flex items-center gap-1.5 min-w-max">
-        {/* Zoom In / Out Controls */}
+      {/* Right Utilities (Icon-only with Tooltips) */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {/* Zoom Controls */}
         <div 
           className="flex items-center bg-surface-hover/80 rounded-md px-1 py-0.5 border border-border gap-0.5"
           title="Phóng to / Thu nhỏ (Ctrl + Cuộn chuột hoặc phím Ctrl và +/-)"
@@ -184,7 +197,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </button>
           <button
             onClick={onZoomReset}
-            className="px-1.5 py-0.5 text-[11px] font-mono font-medium text-fg-secondary hover:text-foreground hover:bg-surface-active rounded transition-colors"
+            className="px-1 py-0.5 text-[11px] font-mono font-medium text-fg-secondary hover:text-foreground hover:bg-surface-active rounded transition-colors"
             title="Click để reset 100% (Ctrl + 0)"
           >
             {Math.round((fontSize / 14) * 100)}%
@@ -202,76 +215,70 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
         {!isCompareMode && (
           <>
-            {/* Quick Compare Buttons */}
+            {/* Quick Compare Icons */}
             <button
               onClick={() => onOpenCompare('json')}
-              className="hidden lg:flex items-center gap-1 px-2.5 py-1 rounded hover:bg-surface-hover text-amber-600 dark:text-amber-400 font-medium transition-colors"
-              title="So sánh JSON"
+              className="p-1.5 rounded hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition-colors flex items-center justify-center"
+              title="Mở tab so sánh JSON (Monaco Diff)"
             >
-              <GitCompare size={12} />
-              <span>Compare JSON</span>
+              <GitCompare size={14} />
             </button>
             <button
               onClick={() => onOpenCompare('xml')}
-              className="hidden lg:flex items-center gap-1 px-2.5 py-1 rounded hover:bg-surface-hover text-emerald-600 dark:text-emerald-400 font-medium transition-colors"
-              title="So sánh XML"
+              className="p-1.5 rounded hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-colors flex items-center justify-center"
+              title="Mở tab so sánh XML (Monaco Diff)"
             >
-              <GitCompare size={12} />
-              <span>Compare XML</span>
+              <GitCompare size={14} className="rotate-90" />
             </button>
 
             <div className="h-4 w-px bg-border mx-1" />
 
-            {/* Upload File */}
+            {/* Upload File Icon */}
             <button
               onClick={onUpload}
-              className="flex items-center gap-1 px-2 py-1 rounded hover:bg-surface-hover text-fg-secondary hover:text-foreground transition-colors"
+              className="p-1.5 rounded hover:bg-surface-hover text-fg-secondary hover:text-foreground transition-colors flex items-center justify-center"
               title="Mở file từ máy tính (.json, .xml, .txt)"
             >
-              <Upload size={13} />
-              <span className="hidden sm:inline">Upload</span>
+              <Upload size={14} />
             </button>
 
-            {/* Download File */}
+            {/* Download File Icon */}
             <button
               onClick={onDownload}
-              className="flex items-center gap-1 px-2 py-1 rounded hover:bg-surface-hover text-fg-secondary hover:text-foreground transition-colors"
-              title="Tải nội dung về máy"
+              className="p-1.5 rounded hover:bg-surface-hover text-fg-secondary hover:text-foreground transition-colors flex items-center justify-center"
+              title="Tải nội dung về máy tính"
             >
-              <Download size={13} />
-              <span className="hidden sm:inline">Download</span>
+              <Download size={14} />
             </button>
 
-            {/* Copy */}
+            {/* Copy Icon */}
             <button
               onClick={onCopy}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded transition-colors ${
+              className={`p-1.5 rounded transition-colors flex items-center justify-center ${
                 isCopied
                   ? 'bg-green-500/10 text-green-600 dark:text-green-400 font-semibold'
                   : 'hover:bg-surface-hover text-fg-secondary hover:text-foreground'
               }`}
-              title="Sao chép toàn bộ"
+              title={isCopied ? 'Đã sao chép vào bộ nhớ tạm!' : 'Sao chép toàn bộ'}
             >
-              {isCopied ? <Check size={13} /> : <Copy size={13} />}
-              <span>{isCopied ? 'Đã copy' : 'Copy'}</span>
+              {isCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
             </button>
 
-            {/* Clear */}
+            {/* Clear Icon */}
             <button
               onClick={onClear}
-              className="flex items-center gap-1 px-2 py-1 rounded hover:bg-red-500/10 text-fg-secondary hover:text-red-500 transition-colors"
+              className="p-1.5 rounded hover:bg-red-500/10 text-fg-secondary hover:text-red-500 transition-colors flex items-center justify-center"
               title="Xóa trắng nội dung"
             >
-              <Trash2 size={13} />
-              <span className="hidden sm:inline">Clear</span>
+              <Trash2 size={14} />
             </button>
           </>
         )}
 
         {/* Stats Info */}
         {stats && (
-          <div className="hidden md:flex items-center gap-2 pl-2 border-l border-border text-[11px] text-fg-secondary">
-            <span>{stats.lines.toLocaleString()} dòng</span>
+          <div className="hidden sm:flex items-center gap-1.5 pl-2 border-l border-border text-[11px] text-fg-secondary font-mono">
+            <span>{stats.lines.toLocaleString()} l</span>
             <span>&bull;</span>
             <span>{(stats.size / 1024).toFixed(1)} KB</span>
           </div>
@@ -280,4 +287,3 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     </div>
   );
 };
-

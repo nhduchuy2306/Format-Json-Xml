@@ -5,6 +5,7 @@ import type { TabItem } from './components/TabBar';
 import { Toolbar } from './components/Toolbar';
 import { EditorView } from './components/EditorView';
 import { CompareView } from './components/CompareView';
+import { SplitView } from './components/SplitView';
 import { Toast } from './components/Toast';
 import type { ToastMessage } from './components/Toast';
 import { 
@@ -19,7 +20,9 @@ import {
   sampleJson, 
   sampleXml, 
   sampleCompareOriginal, 
-  sampleCompareModified 
+  sampleCompareModified,
+  sampleRequest,
+  sampleResponse
 } from './utils/sampleData';
 
 export const App: React.FC = () => {
@@ -39,13 +42,25 @@ export const App: React.FC = () => {
     },
     {
       id: 'tab-2',
+      title: 'Split View',
+      type: 'split',
+      language: 'json',
+      content: '',
+      leftLanguage: 'json',
+      leftContent: sampleRequest,
+      rightLanguage: 'xml',
+      rightContent: sampleResponse,
+      splitOrientation: 'horizontal',
+    },
+    {
+      id: 'tab-3',
       title: 'response.xml',
       type: 'editor',
       language: 'xml',
       content: sampleXml,
     },
     {
-      id: 'tab-3',
+      id: 'tab-4',
       title: 'Compare JSON',
       type: 'compare',
       language: 'json',
@@ -135,6 +150,28 @@ export const App: React.FC = () => {
       return;
     }
 
+    if (activeTab.type === 'split') {
+      const fnL = (activeTab.leftLanguage || 'json') === 'json' ? formatJson : formatXml;
+      const resL = fnL(activeTab.leftContent || '', indent, enableNested);
+
+      const fnR = (activeTab.rightLanguage || 'xml') === 'json' ? formatJson : formatXml;
+      const resR = fnR(activeTab.rightContent || '', indent, enableNested);
+
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === activeTabId
+            ? {
+                ...tab,
+                leftContent: resL.success ? resL.content : tab.leftContent,
+                rightContent: resR.success ? resR.content : tab.rightContent,
+              }
+            : tab
+        )
+      );
+      showToast('✨ Đã format cả Request & Response!', 'success');
+      return;
+    }
+
     // Auto-detect language if user pasted XML in JSON tab or JSON in XML tab
     const targetLang = detectLanguage(activeTab.content);
 
@@ -173,6 +210,114 @@ export const App: React.FC = () => {
       showToast(res.error || 'Lỗi cú pháp', 'error');
     }
   }, [activeTab, activeTabId, indent, enableNested, showToast]);
+
+  // Split View handlers
+  const handleLeftContentChange = useCallback((newContent: string) => {
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === activeTabId ? { ...tab, leftContent: newContent, isModified: true } : tab
+      )
+    );
+  }, [activeTabId]);
+
+  const handleRightContentChange = useCallback((newContent: string) => {
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === activeTabId ? { ...tab, rightContent: newContent, isModified: true } : tab
+      )
+    );
+  }, [activeTabId]);
+
+  const handleLeftLanguageChange = useCallback((lang: 'json' | 'xml') => {
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === activeTabId ? { ...tab, leftLanguage: lang } : tab
+      )
+    );
+  }, [activeTabId]);
+
+  const handleRightLanguageChange = useCallback((lang: 'json' | 'xml') => {
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === activeTabId ? { ...tab, rightLanguage: lang } : tab
+      )
+    );
+  }, [activeTabId]);
+
+  const handleToggleOrientation = useCallback(() => {
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === activeTabId
+          ? {
+              ...tab,
+              splitOrientation: tab.splitOrientation === 'vertical' ? 'horizontal' : 'vertical',
+            }
+          : tab
+      )
+    );
+  }, [activeTabId]);
+
+  const handleCompareFromSplit = useCallback(() => {
+    const newId = `compare-${Date.now()}`;
+    const newTab: TabItem = {
+      id: newId,
+      title: `Compare Req vs Res`,
+      type: 'compare',
+      language: activeTab.leftLanguage || 'json',
+      content: '',
+      originalContent: activeTab.leftContent || '',
+      modifiedContent: activeTab.rightContent || '',
+    };
+    setTabs((prev) => [...prev, newTab]);
+    setActiveTabId(newId);
+    showToast('Đã mở tab so sánh giữa Request và Response!', 'info');
+  }, [activeTab, showToast]);
+
+  const handleOpenSplit = useCallback(() => {
+    const newId = `split-${Date.now()}`;
+    const newTab: TabItem = {
+      id: newId,
+      title: 'Split View',
+      type: 'split',
+      language: 'json',
+      content: '',
+      leftLanguage: 'json',
+      leftContent: sampleRequest,
+      rightLanguage: 'xml',
+      rightContent: sampleResponse,
+      splitOrientation: 'horizontal',
+    };
+    setTabs((prev) => [...prev, newTab]);
+    setActiveTabId(newId);
+    showToast('Đã mở màn hình chia đôi Split View!', 'info');
+  }, [showToast]);
+
+  const handleToggleSplitView = useCallback(() => {
+    setTabs((prev) =>
+      prev.map((tab) => {
+        if (tab.id !== activeTabId) return tab;
+        if (tab.type === 'split') {
+          return {
+            ...tab,
+            type: 'editor',
+            content: tab.leftContent || tab.content,
+            language: tab.leftLanguage || tab.language,
+          };
+        } else if (tab.type === 'editor') {
+          return {
+            ...tab,
+            type: 'split',
+            leftLanguage: tab.language,
+            leftContent: tab.content,
+            rightLanguage: tab.language,
+            rightContent: '',
+            splitOrientation: 'horizontal',
+          };
+        }
+        return tab;
+      })
+    );
+  }, [activeTabId]);
 
   // Minify action
   const handleMinify = useCallback(() => {
@@ -390,10 +535,17 @@ export const App: React.FC = () => {
 
   // Stats calculation
   const stats = {
-    lines: (activeTab.type === 'editor' ? activeTab.content : activeTab.modifiedContent || '')
-      .split('\n').length,
+    lines: (activeTab.type === 'split'
+      ? (activeTab.leftContent || '').split('\n').length + (activeTab.rightContent || '').split('\n').length
+      : activeTab.type === 'editor'
+      ? activeTab.content.split('\n').length
+      : (activeTab.modifiedContent || '').split('\n').length),
     size: new Blob([
-      activeTab.type === 'editor' ? activeTab.content : activeTab.modifiedContent || '',
+      activeTab.type === 'split'
+        ? (activeTab.leftContent || '') + (activeTab.rightContent || '')
+        : activeTab.type === 'editor'
+        ? activeTab.content
+        : activeTab.modifiedContent || '',
     ]).size,
   };
 
@@ -417,6 +569,7 @@ export const App: React.FC = () => {
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onNewTab={handleNewTab}
         onOpenCompare={handleOpenCompare}
+        onOpenSplit={handleOpenSplit}
       />
 
       {/* Tab Bar */}
@@ -454,6 +607,8 @@ export const App: React.FC = () => {
         onUpload={handleUploadClick}
         onDownload={handleDownload}
         onOpenCompare={handleOpenCompare}
+        onToggleSplitView={handleToggleSplitView}
+        isSplitMode={activeTab.type === 'split'}
         fontSize={fontSize}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
@@ -463,9 +618,28 @@ export const App: React.FC = () => {
         stats={stats}
       />
 
-      {/* Workspace Area: Editor or Compare View */}
+      {/* Workspace Area: Split, Editor or Compare View */}
       <main className="flex-1 w-full h-full overflow-hidden relative">
-        {activeTab.type === 'editor' ? (
+        {activeTab.type === 'split' ? (
+          <SplitView
+            leftLanguage={activeTab.leftLanguage || 'json'}
+            leftContent={activeTab.leftContent || ''}
+            rightLanguage={activeTab.rightLanguage || 'xml'}
+            rightContent={activeTab.rightContent || ''}
+            splitOrientation={activeTab.splitOrientation || 'horizontal'}
+            onChangeLeftContent={handleLeftContentChange}
+            onChangeRightContent={handleRightContentChange}
+            onChangeLeftLanguage={handleLeftLanguageChange}
+            onChangeRightLanguage={handleRightLanguageChange}
+            onToggleOrientation={handleToggleOrientation}
+            onCompareWithDiff={handleCompareFromSplit}
+            theme={theme}
+            indent={indent}
+            fontSize={fontSize}
+            enableNested={enableNested}
+            onNotify={showToast}
+          />
+        ) : activeTab.type === 'editor' ? (
           <EditorView
             language={activeTab.language}
             content={activeTab.content}

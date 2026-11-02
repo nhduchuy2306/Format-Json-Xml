@@ -5,7 +5,8 @@ import {
   Moon, 
   GitCompare, 
   FileJson, 
-  FileCode 
+  FileCode,
+  Columns
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -13,6 +14,7 @@ interface HeaderProps {
   onToggleTheme: () => void;
   onNewTab: (lang?: 'json' | 'xml') => void;
   onOpenCompare: (lang: 'json' | 'xml') => void;
+  onOpenSplit: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleTheme,
   onNewTab,
   onOpenCompare,
+  onOpenSplit,
 }) => {
   return (
     <header className="h-12 border-b border-border bg-surface px-4 flex items-center justify-between select-none">
@@ -76,6 +79,15 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <GitCompare size={14} />
           <span>Compare XML</span>
+        </button>
+
+        <button
+          onClick={onOpenSplit}
+          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 transition-all shadow-sm active:scale-95"
+          title="Mở màn hình chia đôi 2 khung soạn thảo song song"
+        >
+          <Columns size={14} />
+          <span>Split View</span>
         </button>
 
         <div className="h-4 w-px bg-border mx-1" />

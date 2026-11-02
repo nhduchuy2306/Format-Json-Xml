@@ -27,7 +27,15 @@
    - Hỗ trợ tab Editor thường và tab Compare chuyên dụng.
    - Thêm tab nhanh chỉ bằng một cú click chuột (`+ JSON`, `+ XML`).
 
-5. **Compare JSON & Compare XML (So sánh Diff trực quan)**:
+5. **Split View (Chia đôi màn hình Request & Response)**:
+   - Nút chuyên biệt **`Split (Req / Res)`** trên header và nút gạt **`Chia đôi (Req/Res)`** trên thanh công cụ.
+   - Hiển thị song song 2 khung soạn thảo độc lập:
+     - Bên trái: **Request** (có thể chọn JSON hoặc XML, có Format, Minify, Copy, Clear riêng).
+     - Bên phải: **Response** (có thể chọn JSON hoặc XML, có Format, Minify, Copy, Clear riêng).
+   - Thanh điều khiển trung tâm: Hoán đổi Request <-> Response, chuyển đổi chia ngang (Trái/Phải) hoặc chia dọc (Trên/Dưới), và nút chuyển sang so sánh Diff trực tiếp giữa Request & Response!
+   - Bấm `Ctrl + S` khi ở chế độ này sẽ tự động format **CẢ HAI** Request & Response cùng lúc.
+
+6. **Compare JSON & Compare XML (So sánh Diff trực quan)**:
    - Hai nút chuyên biệt **`Compare JSON`** và **`Compare XML`** ngay trên thanh điều hướng.
    - Sử dụng Monaco Diff Editor mạnh mẽ: hiển thị Bản Gốc (Original) bên trái và Bản Đã Sửa (Modified) bên phải.
    - Tô màu highlight rõ ràng từng ký tự, dòng được thêm, xóa hoặc sửa đổi.

@@ -44,3 +44,27 @@ export const sampleCompareModified = `{
   "tags": ["mới", "hot sale", "freeship"]
 }`;
 
+export const sampleRequest = `{
+  "action": "SearchCurrentAccount",
+  "channel": "MOBILE_BANKING",
+  "requestTime": "2026-11-02T22:30:00Z",
+  "criteria": {
+    "accountNo": "0965777792",
+    "includeBalances": true,
+    "limit": 10
+  }
+}`;
+
+export const sampleResponse = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ns2:SearchCurrentAccountResponse xmlns:ns2="http://www.alsb.com/">
+  <responseCode>00</responseCode>
+  <description>Thành công</description>
+  <accountInfo>
+    <AccountNo>0965777792</AccountNo>
+    <AccountName>NGUYEN VAN A</AccountName>
+    <Currency>VND</Currency>
+    <AvailableBalance>158500000</AvailableBalance>
+    <Status>ACTIVE</Status>
+  </accountInfo>
+</ns2:SearchCurrentAccountResponse>`;
+

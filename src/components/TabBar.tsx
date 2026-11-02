@@ -1,14 +1,21 @@
 import React from 'react';
-import { X, Plus, FileJson, FileCode, GitCompare } from 'lucide-react';
+import { X, Plus, FileJson, FileCode, GitCompare, Columns } from 'lucide-react';
 
 export interface TabItem {
   id: string;
   title: string;
-  type: 'editor' | 'compare';
+  type: 'editor' | 'compare' | 'split';
   language: 'json' | 'xml';
   content: string;
   originalContent?: string;
   modifiedContent?: string;
+  leftTitle?: string;
+  leftLanguage?: 'json' | 'xml';
+  leftContent?: string;
+  rightTitle?: string;
+  rightLanguage?: 'json' | 'xml';
+  rightContent?: string;
+  splitOrientation?: 'horizontal' | 'vertical';
   isModified?: boolean;
 }
 
@@ -47,6 +54,8 @@ export const TabBar: React.FC<TabBarProps> = ({
                   size={13}
                   className={tab.language === 'json' ? 'text-amber-500' : 'text-emerald-500'}
                 />
+              ) : tab.type === 'split' ? (
+                <Columns size={13} className="text-cyan-500" />
               ) : tab.language === 'json' ? (
                 <FileJson size={13} className="text-amber-500" />
               ) : (
