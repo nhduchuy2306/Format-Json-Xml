@@ -19,14 +19,19 @@ export interface FormatResult {
 }
 
 /**
- * Detect language based on string content, with log/prefix tolerance
+ * Detect language based on string content, with log/prefix tolerance & escaped XML support
  */
 export function detectLanguage(text: string): LanguageType {
   const trimmed = text.trim();
   const xmlStart = trimmed.search(/<\??[a-zA-Z0-9_:-]/);
+  const escapedXmlStart = trimmed.search(/&lt;\??[a-zA-Z0-9_:-]/);
   const jsonStart = trimmed.search(/[{[]/);
 
-  if (xmlStart !== -1 && (jsonStart === -1 || xmlStart < jsonStart)) {
+  const effectiveXmlStart = (xmlStart !== -1 && (escapedXmlStart === -1 || xmlStart < escapedXmlStart))
+    ? xmlStart
+    : escapedXmlStart;
+
+  if (effectiveXmlStart !== -1 && (jsonStart === -1 || effectiveXmlStart < jsonStart)) {
     return 'xml';
   }
   if (jsonStart !== -1) {
@@ -111,7 +116,7 @@ export function repairJson(raw: string): {
       try {
         const parsed = JSON.parse(cleaned);
         return { success: true, parsed, repaired: true, note: notes.join(', ') };
-      } catch {}
+      } catch { }
     } else {
       const firstSquare = cleaned.indexOf('[');
       const lastSquare = cleaned.lastIndexOf(']');
@@ -123,7 +128,7 @@ export function repairJson(raw: string): {
         try {
           const parsed = JSON.parse(cleaned);
           return { success: true, parsed, repaired: true, note: notes.join(', ') };
-        } catch {}
+        } catch { }
       }
     }
 
@@ -206,7 +211,19 @@ export function repairXml(raw: string): {
     notes.push('Bóc tách chuỗi bọc ngoài');
   }
 
-  // 3. Extract XML if prefix exists (like: 'SearchCurrentAccount: <?xml...')
+  // 3. Auto-detect & unescape escaped XML entities (&lt;?xml... or &lt;tag&gt;...)
+  if (text.includes('&lt;') && text.includes('&gt;')) {
+    const unescaped = unescapeXml(text);
+    const uStart = unescaped.search(/<\??[a-zA-Z0-9_:-]/);
+    const uEnd = unescaped.lastIndexOf('>');
+    if (uStart !== -1 && uEnd > uStart) {
+      text = unescaped;
+      repaired = true;
+      notes.push('Tự động unescape XML entities (&lt; &gt;)');
+    }
+  }
+
+  // 4. Extract XML if prefix exists (like: 'SearchCurrentAccount: <?xml...')
   const xmlStartIdx = text.search(/<\??[a-zA-Z0-9_:-]/);
   const xmlEndIdx = text.lastIndexOf('>');
 
@@ -218,7 +235,7 @@ export function repairXml(raw: string): {
     }
   }
 
-  // 4. Validate XML
+  // 5. Validate XML
   let validation = XMLValidator.validate(text);
   if (validation === true) {
     return { success: true, text, repaired, note: notes.join(', ') };
@@ -263,6 +280,16 @@ export function deepParseJson(obj: any, detectedNested: { count: number } = { co
           detectedNested.count++;
           return deepParseJson(rep.parsed, detectedNested);
         }
+      }
+    }
+
+    // If string is an escaped XML document inside JSON
+    if (trimmed.startsWith('&lt;') && trimmed.endsWith('&gt;')) {
+      const unescaped = unescapeXml(trimmed);
+      const repXml = repairXml(unescaped);
+      if (repXml.success && repXml.text) {
+        detectedNested.count++;
+        return repXml.text;
       }
     }
     return obj;
@@ -378,15 +405,23 @@ export function minifyJson(input: string): FormatResult {
 }
 
 /**
- * Unescape XML entities
+ * Unescape XML entities (supports multi-level unescape like &amp;lt; -> &lt; -> <)
  */
-function unescapeXml(str: string): string {
-  return str
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'");
+export function unescapeXml(str: string): string {
+  let prev = '';
+  let curr = str;
+  let depth = 0;
+  while (prev !== curr && depth < 3) {
+    prev = curr;
+    curr = curr
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'");
+    depth++;
+  }
+  return curr;
 }
 
 /**
@@ -396,7 +431,7 @@ function processNestedXml(xml: string, detected: { count: number }): string {
   // 1. Process CDATA sections
   let result = xml.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, (_match, cdataContent) => {
     const trimmed = cdataContent.trim();
-    // If it's JSON
+    // If it's JSON inside CDATA
     if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
       const rep = repairJson(trimmed);
       if (rep.success && rep.parsed) {
@@ -405,7 +440,17 @@ function processNestedXml(xml: string, detected: { count: number }): string {
         return `<![CDATA[\n${JSON.stringify(deep, null, 2)}\n]]>`;
       }
     }
-    // If it's XML inside CDATA
+    // If it's escaped XML inside CDATA (&lt;...&gt;)
+    if (trimmed.startsWith('&lt;') && trimmed.endsWith('&gt;')) {
+      const unescaped = unescapeXml(trimmed);
+      const repXml = repairXml(unescaped);
+      if (repXml.success && repXml.text) {
+        detected.count++;
+        const fmt = xmlFormatter(repXml.text, { indentation: '  ', collapseContent: true });
+        return `<![CDATA[\n${fmt}\n]]>`;
+      }
+    }
+    // If it's raw XML inside CDATA
     if (trimmed.startsWith('<') && trimmed.endsWith('>')) {
       const repXml = repairXml(trimmed);
       if (repXml.success && repXml.text) {
@@ -417,18 +462,17 @@ function processNestedXml(xml: string, detected: { count: number }): string {
     return _match;
   });
 
-  // 2. Process escaped XML tags &lt;tag&gt;...&lt;/tag&gt;
-  result = result.replace(/>(&lt;[a-zA-Z0-9_]+[\s\S]*?&gt;)</g, (_match, escapedContent) => {
-    try {
-      const unescaped = unescapeXml(escapedContent).trim();
+  // 2. Process escaped XML tags &lt;tag&gt;...&lt;/tag&gt; inside element content
+  result = result.replace(/>([\s\S]*?)</g, (_match, textContent) => {
+    const trimmed = textContent.trim();
+    if (trimmed.startsWith('&lt;') && trimmed.endsWith('&gt;')) {
+      const unescaped = unescapeXml(trimmed);
       const repXml = repairXml(unescaped);
       if (repXml.success && repXml.text) {
         detected.count++;
         const fmt = xmlFormatter(repXml.text, { indentation: '  ', collapseContent: true });
         return `>\n${fmt}\n<`;
       }
-    } catch {
-      // keep
     }
     return _match;
   });
