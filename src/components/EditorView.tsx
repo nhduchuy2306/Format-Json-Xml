@@ -114,9 +114,14 @@ export const EditorView: React.FC<EditorViewProps> = ({
             mouseWheelZoom: true,
             fontFamily: "'Fira Code', 'Cascadia Code', Consolas, Menlo, Monaco, monospace",
             lineNumbers: 'on',
-            lineDecorationsWidth: 10,
+            lineDecorationsWidth: typeof window !== 'undefined' && window.innerWidth < 768 ? 4 : 10,
             lineNumbersMinChars: 3,
-            minimap: { enabled: true, maxColumn: 80 },
+            minimap: { 
+              enabled: typeof window !== 'undefined' ? window.innerWidth >= 768 : true, 
+              maxColumn: 80 
+            },
+            glyphMargin: false,
+            folding: typeof window !== 'undefined' ? window.innerWidth >= 768 : true,
             wordWrap: 'on',
             scrollBeyondLastLine: false,
             automaticLayout: true,

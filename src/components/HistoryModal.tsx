@@ -67,25 +67,25 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
-        className="w-full max-w-3xl max-h-[85vh] flex flex-col rounded-xl bg-surface border border-border shadow-2xl overflow-hidden"
+        className="w-full max-w-3xl max-h-[90dvh] flex flex-col rounded-xl bg-surface border border-border shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-surface-secondary/40 select-none">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center">
+        <div className="px-3.5 sm:px-5 py-3 sm:py-4 border-b border-border flex items-center justify-between bg-surface-secondary/40 select-none">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center shrink-0">
               <History size={18} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-foreground">Lịch sử định dạng</h2>
-                <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <h2 className="text-xs sm:text-sm font-semibold text-foreground">Lịch sử định dạng</h2>
+                <span className="text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   Lưu 10 ngày gần nhất
                 </span>
               </div>
-              <p className="text-xs text-fg-secondary mt-0.5">
+              <p className="text-[11px] sm:text-xs text-fg-secondary mt-0.5">
                 Dữ liệu lưu an toàn trên trình duyệt này và tự động hủy sau 10 ngày.
               </p>
             </div>
@@ -93,7 +93,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-fg-secondary hover:text-foreground hover:bg-surface-hover transition-colors"
+            className="p-1.5 rounded-lg text-fg-secondary hover:text-foreground hover:bg-surface-hover transition-colors shrink-0"
             title="Đóng (Esc)"
           >
             <X size={18} />
@@ -101,8 +101,8 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         </div>
 
         {/* Toolbar: Search, Filters, and Clear */}
-        <div className="px-5 py-3 border-b border-border flex items-center justify-between gap-3 bg-surface/50">
-          <div className="flex items-center gap-2 flex-1 max-w-sm">
+        <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 border-b border-border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-surface/50">
+          <div className="flex items-center gap-2 flex-1 max-w-full sm:max-w-sm">
             <div className="relative w-full">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-secondary" />
               <input
@@ -115,7 +115,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between sm:justify-end gap-2">
             {/* Lang filters */}
             <div className="flex items-center bg-surface-secondary rounded-md p-0.5 border border-border text-xs">
               <button
@@ -204,8 +204,8 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                 className="group p-3.5 rounded-lg border border-border hover:border-blue-500/40 bg-surface-secondary/40 hover:bg-surface-secondary/80 transition-all shadow-xs flex flex-col gap-2.5"
               >
                 {/* Item Top Info */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                     {item.language === 'json' ? (
                       <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                         <FileJson size={13} />
@@ -228,7 +228,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                   </div>
 
                   {/* Quick Item Actions */}
-                  <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 self-end sm:self-auto opacity-90 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => handleCopy(item)}
                       className="p-1.5 rounded-md hover:bg-surface text-fg-secondary hover:text-foreground transition-colors"

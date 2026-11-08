@@ -28,7 +28,9 @@ export const CompareView: React.FC<CompareViewProps> = ({
   enableNested,
   onNotify,
 }) => {
-  const [renderSideBySide, setRenderSideBySide] = useState(true);
+  const [renderSideBySide, setRenderSideBySide] = useState<boolean>(() => {
+    return typeof window !== 'undefined' ? window.innerWidth >= 768 : true;
+  });
   const diffEditorRef = useRef<any>(null);
 
   const handleEditorDidMount = (editor: any) => {

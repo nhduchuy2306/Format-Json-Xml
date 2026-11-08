@@ -50,9 +50,9 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
-        className="w-full max-w-lg rounded-xl bg-surface border border-border shadow-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-xl bg-surface border border-border shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -201,7 +201,7 @@ VITE_FIREBASE_PROJECT_ID=format-json-xml`}
               )}
 
               {/* Information Features */}
-              <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-border/60 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-border/60 text-xs">
                 <div className="p-2.5 rounded-lg bg-surface-secondary/50 border border-border/60 flex items-start gap-2">
                   <Clock size={15} className="text-emerald-500 shrink-0 mt-0.5" />
                   <div>

@@ -69,9 +69,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   stats,
 }) => {
   return (
-    <div className="h-10 bg-surface/50 border-b border-border px-3 flex items-center justify-between text-xs select-none gap-2">
+    <div className="h-10 bg-surface/50 border-b border-border px-2 sm:px-3 flex items-center justify-between text-xs select-none gap-2 overflow-x-auto scrollbar-none">
       {/* Left Action Icons */}
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
         {!isCompareMode ? (
           <>
             {/* Format Icon Button (Ctrl + S) */}
@@ -183,9 +183,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
       {/* Right Utilities (Icon-only with Tooltips) */}
       <div className="flex items-center gap-1.5 shrink-0">
-        {/* Zoom Controls */}
+        {/* Zoom Controls (hidden on mobile to save space) */}
         <div 
-          className="flex items-center bg-surface-hover/80 rounded-md px-1 py-0.5 border border-border gap-0.5"
+          className="hidden sm:flex items-center bg-surface-hover/80 rounded-md px-1 py-0.5 border border-border gap-0.5"
           title="Phóng to / Thu nhỏ (Ctrl + Cuộn chuột hoặc phím Ctrl và +/-)"
         >
           <button
@@ -211,7 +211,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </button>
         </div>
 
-        <div className="h-4 w-px bg-border mx-1" />
+        <div className="hidden sm:block h-4 w-px bg-border mx-1" />
 
         {!isCompareMode && (
           <>

@@ -843,7 +843,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-background text-foreground">
+    <div className="flex flex-col h-screen h-[100dvh] w-full overflow-hidden bg-background text-foreground">
       {/* Toast Notification */}
       <Toast toast={toast} onClose={() => setToast(null)} />
 

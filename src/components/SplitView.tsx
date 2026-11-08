@@ -153,38 +153,56 @@ export const SplitView: React.FC<SplitViewProps> = ({
     });
   };
 
-  // Drag to resize handler
+  // Drag to resize handler (supports both Mouse and Touch for mobile)
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleTouchStart = () => {
     setIsDragging(true);
   };
 
   useEffect(() => {
     if (!isDragging) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMove = (clientX: number, clientY: number) => {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       if (isHorizontal) {
-        const relativeX = e.clientX - rect.left;
+        const relativeX = clientX - rect.left;
         const newRatio = (relativeX / rect.width) * 100;
         setSplitRatio(Math.min(85, Math.max(15, newRatio)));
       } else {
-        const relativeY = e.clientY - rect.top;
+        const relativeY = clientY - rect.top;
         const newRatio = (relativeY / rect.height) * 100;
         setSplitRatio(Math.min(85, Math.max(15, newRatio)));
       }
     };
 
-    const handleMouseUp = () => {
+    const handleMouseMove = (e: MouseEvent) => {
+      handleMove(e.clientX, e.clientY);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) {
+        handleMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+
+    const handleEndDrag = () => {
       setIsDragging(false);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mouseup', handleEndDrag);
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleEndDrag);
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mouseup', handleEndDrag);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleEndDrag);
     };
   }, [isDragging, isHorizontal]);
 
@@ -379,9 +397,10 @@ export const SplitView: React.FC<SplitViewProps> = ({
             : 'flex-row h-8 justify-center items-center px-2 border-y border-border'
           } gap-1 z-20 shrink-0 select-none shadow-xs relative`}
       >
-        {/* Drag handle line on the divider border */}
+        {/* Drag handle line on the divider border (supports mouse & touch) */}
         <div
           onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
           onDoubleClick={handleResetRatio}
           className={`absolute ${isHorizontal
               ? 'inset-y-0 -left-1.5 -right-1.5 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40'
