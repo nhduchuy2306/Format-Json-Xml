@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import type { Monaco } from '@monaco-editor/react';
 import { AlertCircle } from 'lucide-react';
@@ -29,6 +29,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
   onFormatShortcut,
 }) => {
   const editorRef = useRef<any>(null);
+  const isInternalChangeRef = useRef<boolean>(false);
 
   const handleEditorDidMount = (editor: any, monaco: Monaco) => {
     editorRef.current = editor;
@@ -49,6 +50,46 @@ export const EditorView: React.FC<EditorViewProps> = ({
     }
   };
 
+  const handleEditorChange = (val: string | undefined) => {
+    isInternalChangeRef.current = true;
+    onChange(val || '');
+  };
+
+  // Sync external changes (Format, Clear, Upload, Restore from history)
+  // without resetting cursor or undo stack
+  useEffect(() => {
+    if (!editorRef.current) return;
+
+    if (isInternalChangeRef.current) {
+      isInternalChangeRef.current = false;
+      return;
+    }
+
+    const currentVal = editorRef.current.getValue();
+    if (content !== currentVal) {
+      const model = editorRef.current.getModel();
+      if (model) {
+        const pos = editorRef.current.getPosition();
+        const scrollTop = editorRef.current.getScrollTop();
+
+        // Use executeEdits to preserve undo/redo history and cursor
+        editorRef.current.executeEdits('external-update', [
+          {
+            range: model.getFullModelRange(),
+            text: content,
+          },
+        ]);
+
+        if (pos) {
+          editorRef.current.setPosition(pos);
+        }
+        editorRef.current.setScrollTop(scrollTop);
+      } else {
+        editorRef.current.setValue(content);
+      }
+    }
+  }, [content]);
+
   // Jump cursor to error line when clicked
   const handleJumpToError = () => {
     if (editorRef.current && errorLine) {
@@ -64,9 +105,9 @@ export const EditorView: React.FC<EditorViewProps> = ({
         <Editor
           height="100%"
           language={language}
-          value={content}
+          defaultValue={content}
           theme={theme === 'dark' ? 'vs-dark' : 'light'}
-          onChange={(val) => onChange(val || '')}
+          onChange={handleEditorChange}
           onMount={handleEditorDidMount}
           options={{
             fontSize,

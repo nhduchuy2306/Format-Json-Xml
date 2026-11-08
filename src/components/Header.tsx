@@ -6,7 +6,8 @@ import {
   GitCompare, 
   FileJson, 
   FileCode,
-  Columns
+  Columns,
+  History
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -15,6 +16,8 @@ interface HeaderProps {
   onNewTab: (lang?: 'json' | 'xml') => void;
   onOpenCompare: (lang: 'json' | 'xml') => void;
   onOpenSplit: () => void;
+  onOpenHistory: () => void;
+  historyCount: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -23,6 +26,8 @@ export const Header: React.FC<HeaderProps> = ({
   onNewTab,
   onOpenCompare,
   onOpenSplit,
+  onOpenHistory,
+  historyCount,
 }) => {
   return (
     <header className="h-12 border-b border-border bg-surface px-4 flex items-center justify-between select-none">
@@ -88,6 +93,20 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Columns size={14} />
           <span>Split View</span>
+        </button>
+
+        <button
+          onClick={onOpenHistory}
+          className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md hover:bg-surface-hover text-foreground border border-border transition-all shadow-xs active:scale-95"
+          title="Xem lịch sử định dạng (10 ngày gần nhất)"
+        >
+          <History size={14} className="text-blue-500" />
+          <span>Lịch sử</span>
+          {historyCount > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-500/20 text-blue-500 font-semibold">
+              {historyCount}
+            </span>
+          )}
         </button>
 
         <div className="h-4 w-px bg-border mx-1" />

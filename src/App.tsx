@@ -8,6 +8,14 @@ import { CompareView } from './components/CompareView';
 import { SplitView } from './components/SplitView';
 import { Toast } from './components/Toast';
 import type { ToastMessage } from './components/Toast';
+import { HistoryModal } from './components/HistoryModal';
+import { 
+  getHistory, 
+  addHistoryItem, 
+  deleteHistoryItem, 
+  clearHistory 
+} from './utils/history';
+import type { HistoryItem } from './utils/history';
 import { 
   formatJson, 
   formatXml, 
@@ -25,53 +33,90 @@ import {
   sampleResponse
 } from './utils/sampleData';
 
+const STORAGE_KEY_TABS = 'format_json_xml_tabs';
+const STORAGE_KEY_ACTIVE_TAB = 'format_json_xml_active_tab';
+const STORAGE_KEY_INDENT = 'format_json_xml_indent';
+
+const defaultTabs: TabItem[] = [
+  {
+    id: 'tab-1',
+    title: 'data.json',
+    type: 'editor',
+    language: 'json',
+    content: sampleJson,
+  },
+  {
+    id: 'tab-2',
+    title: 'Split View',
+    type: 'split',
+    language: 'json',
+    content: '',
+    leftLanguage: 'json',
+    leftContent: sampleRequest,
+    rightLanguage: 'xml',
+    rightContent: sampleResponse,
+    splitOrientation: 'horizontal',
+  },
+  {
+    id: 'tab-3',
+    title: 'response.xml',
+    type: 'editor',
+    language: 'xml',
+    content: sampleXml,
+  },
+  {
+    id: 'tab-4',
+    title: 'Compare JSON',
+    type: 'compare',
+    language: 'json',
+    content: '',
+    originalContent: sampleCompareOriginal,
+    modifiedContent: sampleCompareModified,
+  },
+];
+
 export const App: React.FC = () => {
   // Theme state: default dark mode like VS Code / json.site
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
   });
 
-  // Tab state
-  const [tabs, setTabs] = useState<TabItem[]>([
-    {
-      id: 'tab-1',
-      title: 'data.json',
-      type: 'editor',
-      language: 'json',
-      content: sampleJson,
-    },
-    {
-      id: 'tab-2',
-      title: 'Split View',
-      type: 'split',
-      language: 'json',
-      content: '',
-      leftLanguage: 'json',
-      leftContent: sampleRequest,
-      rightLanguage: 'xml',
-      rightContent: sampleResponse,
-      splitOrientation: 'horizontal',
-    },
-    {
-      id: 'tab-3',
-      title: 'response.xml',
-      type: 'editor',
-      language: 'xml',
-      content: sampleXml,
-    },
-    {
-      id: 'tab-4',
-      title: 'Compare JSON',
-      type: 'compare',
-      language: 'json',
-      content: '',
-      originalContent: sampleCompareOriginal,
-      modifiedContent: sampleCompareModified,
-    },
-  ]);
+  // Tab state: restored from localStorage or fallback to default sample tabs
+  const [tabs, setTabs] = useState<TabItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_TABS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // Ignore parse error and fallback
+    }
+    return defaultTabs;
+  });
 
-  const [activeTabId, setActiveTabId] = useState<string>('tab-1');
-  const [indent, setIndent] = useState<number | 'tab'>(2);
+  const [activeTabId, setActiveTabId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_ACTIVE_TAB);
+      if (saved) return saved;
+    } catch {
+      // Ignore
+    }
+    return 'tab-1';
+  });
+
+  const [indent, setIndent] = useState<number | 'tab'>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_INDENT);
+    if (saved === 'tab') return 'tab';
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed)) return parsed;
+    }
+    return 2;
+  });
+
   const [fontSize, setFontSize] = useState<number>(() => {
     return parseFloat(localStorage.getItem('fontSize') || '14');
   });
@@ -83,6 +128,8 @@ export const App: React.FC = () => {
     col?: number;
   }>({});
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>(() => getHistory());
+  const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,6 +142,43 @@ export const App: React.FC = () => {
     }
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  // Persist indent setting
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_INDENT, String(indent));
+  }, [indent]);
+
+  // Persist active tab ID
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_ACTIVE_TAB, activeTabId);
+  }, [activeTabId]);
+
+  // Persist tabs content & state to localStorage (debounced for smooth typing)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY_TABS, JSON.stringify(tabs));
+      } catch (err) {
+        console.warn('LocalStorage quota exceeded or unavailable:', err);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [tabs]);
+
+  // Ensure synchronous save if user suddenly closes/reloads the window
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      try {
+        localStorage.setItem(STORAGE_KEY_TABS, JSON.stringify(tabs));
+        localStorage.setItem(STORAGE_KEY_ACTIVE_TAB, activeTabId);
+      } catch {
+        // Ignore
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [tabs, activeTabId]);
 
   // Active tab reference
   const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
@@ -168,7 +252,22 @@ export const App: React.FC = () => {
             : tab
         )
       );
-      showToast('✨ Đã format cả Request & Response!', 'success');
+
+      if (resL.success && resL.content.trim()) {
+        setHistory(addHistoryItem({
+          language: activeTab.leftLanguage || 'json',
+          title: `${activeTab.title} (Trái)`,
+          content: resL.content,
+        }));
+      }
+      if (resR.success && resR.content.trim()) {
+        setHistory(addHistoryItem({
+          language: activeTab.rightLanguage || 'xml',
+          title: `${activeTab.title} (Phải)`,
+          content: resR.content,
+        }));
+      }
+
       return;
     }
 
@@ -180,6 +279,7 @@ export const App: React.FC = () => {
     const res: FormatResult = formatter(activeTab.content, indent, enableNested);
 
     if (res.success) {
+      const nextTitle = activeTab.title.replace(/\.(json|xml)$/, `.${targetLang}`);
       setTabs((prev) =>
         prev.map((tab) =>
           tab.id === activeTabId 
@@ -187,20 +287,21 @@ export const App: React.FC = () => {
                 ...tab, 
                 content: res.content,
                 language: targetLang,
-                title: tab.title.replace(/\.(json|xml)$/, `.${targetLang}`)
+                title: nextTitle
               } 
             : tab
         )
       );
       setErrorInfo({});
 
-      let msg = `✨ Đã format ${isJson ? 'JSON' : 'XML'} thành công!`;
-      if (res.stats?.autoRepaired && res.stats.repairedNote) {
-        msg = `🛠️ Đã tự fix (${res.stats.repairedNote}) & format!`;
-      } else if (res.stats?.nestedDetected) {
-        msg += ' (Đã giải mã chuỗi lồng nhau)';
+      // Record to 10-day history in localStorage
+      if (res.content.trim()) {
+        setHistory(addHistoryItem({
+          language: targetLang,
+          title: nextTitle,
+          content: res.content,
+        }));
       }
-      showToast(msg, 'success');
     } else {
       setErrorInfo({
         message: res.error,
@@ -455,6 +556,9 @@ export const App: React.FC = () => {
   const handleClear = () => {
     if (activeTab.type === 'editor') {
       handleContentChange('');
+    } else if (activeTab.type === 'split') {
+      handleLeftContentChange('');
+      handleRightContentChange('');
     } else {
       handleCompareOriginalChange('');
       handleCompareModifiedChange('');
@@ -517,6 +621,63 @@ export const App: React.FC = () => {
     showToast('Đã tải file xuống máy', 'success');
   };
 
+  // Restore history item into active editor
+  const handleRestoreHistory = useCallback((item: HistoryItem) => {
+    if (activeTab.type === 'editor') {
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === activeTabId
+            ? {
+                ...tab,
+                content: item.content,
+                language: item.language,
+                title: item.title,
+                isModified: true,
+              }
+            : tab
+        )
+      );
+    } else {
+      const newId = `tab-${Date.now()}`;
+      const newTab: TabItem = {
+        id: newId,
+        title: item.title,
+        type: 'editor',
+        language: item.language,
+        content: item.content,
+      };
+      setTabs((prev) => [...prev, newTab]);
+      setActiveTabId(newId);
+    }
+    setIsHistoryOpen(false);
+    showToast(`Đã nạp bản ghi "${item.title}"!`, 'success');
+  }, [activeTab.type, activeTabId, showToast]);
+
+  // Open history item in a fresh new tab
+  const handleOpenHistoryInNewTab = useCallback((item: HistoryItem) => {
+    const newId = `tab-${Date.now()}`;
+    const newTab: TabItem = {
+      id: newId,
+      title: item.title,
+      type: 'editor',
+      language: item.language,
+      content: item.content,
+    };
+    setTabs((prev) => [...prev, newTab]);
+    setActiveTabId(newId);
+    setIsHistoryOpen(false);
+    showToast(`Đã mở "${item.title}" trong Tab mới!`, 'success');
+  }, [showToast]);
+
+  const handleDeleteHistory = useCallback((id: string) => {
+    setHistory(deleteHistoryItem(id));
+  }, []);
+
+  const handleClearAllHistory = useCallback(() => {
+    clearHistory();
+    setHistory([]);
+  }, []);
+
   // Change language of current tab
   const handleLanguageChange = (lang: 'json' | 'xml') => {
     setTabs((prev) =>
@@ -554,6 +715,18 @@ export const App: React.FC = () => {
       {/* Toast Notification */}
       <Toast toast={toast} onClose={() => setToast(null)} />
 
+      {/* Format History Modal (10-day retention) */}
+      <HistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        history={history}
+        onRestore={handleRestoreHistory}
+        onOpenInNewTab={handleOpenHistoryInNewTab}
+        onDelete={handleDeleteHistory}
+        onClearAll={handleClearAllHistory}
+        onNotify={showToast}
+      />
+
       {/* Hidden File Input for Upload */}
       <input
         ref={fileInputRef}
@@ -570,6 +743,8 @@ export const App: React.FC = () => {
         onNewTab={handleNewTab}
         onOpenCompare={handleOpenCompare}
         onOpenSplit={handleOpenSplit}
+        onOpenHistory={() => setIsHistoryOpen(true)}
+        historyCount={history.length}
       />
 
       {/* Tab Bar */}
@@ -622,6 +797,7 @@ export const App: React.FC = () => {
       <main className="flex-1 w-full h-full overflow-hidden relative">
         {activeTab.type === 'split' ? (
           <SplitView
+            key={activeTabId}
             leftLanguage={activeTab.leftLanguage || 'json'}
             leftContent={activeTab.leftContent || ''}
             rightLanguage={activeTab.rightLanguage || 'xml'}
@@ -641,6 +817,7 @@ export const App: React.FC = () => {
           />
         ) : activeTab.type === 'editor' ? (
           <EditorView
+            key={activeTabId}
             language={activeTab.language}
             content={activeTab.content}
             onChange={handleContentChange}
@@ -654,6 +831,7 @@ export const App: React.FC = () => {
           />
         ) : (
           <CompareView
+            key={activeTabId}
             language={activeTab.language}
             originalContent={activeTab.originalContent || ''}
             modifiedContent={activeTab.modifiedContent || ''}

@@ -1,16 +1,16 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import type { Monaco } from '@monaco-editor/react';
-import { 
-  ArrowLeftRight, 
-  Columns, 
-  Rows, 
-  Sparkles, 
-  Minimize2, 
-  Copy, 
-  Trash2, 
-  GitCompare, 
-  FileJson, 
+import {
+  ArrowLeftRight,
+  Columns,
+  Rows,
+  Sparkles,
+  Minimize2,
+  Copy,
+  Trash2,
+  GitCompare,
+  FileJson,
   FileCode,
   Check,
   GripVertical,
@@ -65,8 +65,68 @@ export const SplitView: React.FC<SplitViewProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const leftEditorRef = useRef<any>(null);
   const rightEditorRef = useRef<any>(null);
+  const isLeftInternalRef = useRef<boolean>(false);
+  const isRightInternalRef = useRef<boolean>(false);
 
   const isHorizontal = splitOrientation === 'horizontal';
+
+  const handleLeftChange = (val: string | undefined) => {
+    isLeftInternalRef.current = true;
+    onChangeLeftContent(val || '');
+  };
+
+  const handleRightChange = (val: string | undefined) => {
+    isRightInternalRef.current = true;
+    onChangeRightContent(val || '');
+  };
+
+  // Sync external changes for left editor without resetting cursor
+  useEffect(() => {
+    if (!leftEditorRef.current) return;
+    if (isLeftInternalRef.current) {
+      isLeftInternalRef.current = false;
+      return;
+    }
+    const currentVal = leftEditorRef.current.getValue();
+    if (leftContent !== currentVal) {
+      const model = leftEditorRef.current.getModel();
+      if (model) {
+        const pos = leftEditorRef.current.getPosition();
+        const scrollTop = leftEditorRef.current.getScrollTop();
+        leftEditorRef.current.executeEdits('external-update', [
+          { range: model.getFullModelRange(), text: leftContent },
+        ]);
+        if (pos) leftEditorRef.current.setPosition(pos);
+        leftEditorRef.current.setScrollTop(scrollTop);
+      } else {
+        leftEditorRef.current.setValue(leftContent);
+      }
+    }
+  }, [leftContent]);
+
+  // Sync external changes for right editor without resetting cursor
+  useEffect(() => {
+    if (!rightEditorRef.current) return;
+    if (isRightInternalRef.current) {
+      isRightInternalRef.current = false;
+      return;
+    }
+    const currentVal = rightEditorRef.current.getValue();
+    if (rightContent !== currentVal) {
+      const model = rightEditorRef.current.getModel();
+      if (model) {
+        const pos = rightEditorRef.current.getPosition();
+        const scrollTop = rightEditorRef.current.getScrollTop();
+        rightEditorRef.current.executeEdits('external-update', [
+          { range: model.getFullModelRange(), text: rightContent },
+        ]);
+        if (pos) rightEditorRef.current.setPosition(pos);
+        rightEditorRef.current.setScrollTop(scrollTop);
+      } else {
+        rightEditorRef.current.setValue(rightContent);
+      }
+    }
+  }, [rightContent]);
 
   // Format Both
   const handleFormatBoth = useCallback(() => {
@@ -77,9 +137,7 @@ export const SplitView: React.FC<SplitViewProps> = ({
     const fnR = rightLanguage === 'json' ? formatJson : formatXml;
     const resR = fnR(rightContent, indent, enableNested);
     if (resR.success) onChangeRightContent(resR.content);
-
-    onNotify('✨ Đã format cả 2 khung soạn thảo!', 'success');
-  }, [leftLanguage, leftContent, rightLanguage, rightContent, indent, enableNested, onChangeLeftContent, onChangeRightContent, onNotify]);
+  }, [leftLanguage, leftContent, rightLanguage, rightContent, indent, enableNested, onChangeLeftContent, onChangeRightContent]);
 
   const handleLeftMount = (editor: any, monaco: Monaco) => {
     leftEditorRef.current = editor;
@@ -141,7 +199,6 @@ export const SplitView: React.FC<SplitViewProps> = ({
     const res = fn(leftContent, indent, enableNested);
     if (res.success) {
       onChangeLeftContent(res.content);
-      onNotify('✨ Đã format khung bên trái!', 'success');
     } else {
       onNotify(res.error || 'Lỗi format khung bên trái', 'error');
     }
@@ -153,7 +210,6 @@ export const SplitView: React.FC<SplitViewProps> = ({
     const res = fn(rightContent, indent, enableNested);
     if (res.success) {
       onChangeRightContent(res.content);
-      onNotify('✨ Đã format khung bên phải!', 'success');
     } else {
       onNotify(res.error || 'Lỗi format khung bên phải', 'error');
     }
@@ -217,17 +273,16 @@ export const SplitView: React.FC<SplitViewProps> = ({
   const rightSize = (new Blob([rightContent]).size / 1024).toFixed(1);
 
   return (
-    <div 
+    <div
       ref={containerRef}
-      className={`flex-1 flex ${isHorizontal ? 'flex-row' : 'flex-col'} h-full w-full overflow-hidden bg-background relative ${
-        isDragging ? (isHorizontal ? 'cursor-col-resize select-none' : 'cursor-row-resize select-none') : ''
-      }`}
+      className={`flex-1 flex ${isHorizontal ? 'flex-row' : 'flex-col'} h-full w-full overflow-hidden bg-background relative ${isDragging ? (isHorizontal ? 'cursor-col-resize select-none' : 'cursor-row-resize select-none') : ''
+        }`}
     >
       {/* Invisible overlay while dragging to prevent iframe/Monaco from capturing mouse events */}
       {isDragging && <div className="absolute inset-0 z-50 bg-transparent" />}
 
       {/* LEFT PANE */}
-      <div 
+      <div
         style={isHorizontal ? { width: `${splitRatio}%` } : { height: `${splitRatio}%` }}
         className="flex flex-col min-w-0 min-h-0 overflow-hidden"
       >
@@ -237,22 +292,20 @@ export const SplitView: React.FC<SplitViewProps> = ({
           <div className="flex items-center bg-surface-hover rounded p-0.5 border border-border text-[11px]">
             <button
               onClick={() => onChangeLeftLanguage('json')}
-              className={`px-1.5 py-0.5 rounded flex items-center gap-1 ${
-                leftLanguage === 'json'
+              className={`px-1.5 py-0.5 rounded flex items-center gap-1 ${leftLanguage === 'json'
                   ? 'bg-background text-amber-500 font-semibold shadow-xs'
                   : 'text-fg-secondary hover:text-foreground'
-              }`}
+                }`}
               title="Chuyển bên trái sang JSON"
             >
               <FileJson size={11} /> JSON
             </button>
             <button
               onClick={() => onChangeLeftLanguage('xml')}
-              className={`px-1.5 py-0.5 rounded flex items-center gap-1 ${
-                leftLanguage === 'xml'
+              className={`px-1.5 py-0.5 rounded flex items-center gap-1 ${leftLanguage === 'xml'
                   ? 'bg-background text-emerald-500 font-semibold shadow-xs'
                   : 'text-fg-secondary hover:text-foreground'
-              }`}
+                }`}
               title="Chuyển bên trái sang XML"
             >
               <FileCode size={11} /> XML
@@ -300,9 +353,9 @@ export const SplitView: React.FC<SplitViewProps> = ({
           <Editor
             height="100%"
             language={leftLanguage}
-            value={leftContent}
+            defaultValue={leftContent}
             theme={theme === 'dark' ? 'vs-dark' : 'light'}
-            onChange={(val) => onChangeLeftContent(val || '')}
+            onChange={handleLeftChange}
             onMount={handleLeftMount}
             options={{
               fontSize,
@@ -320,22 +373,20 @@ export const SplitView: React.FC<SplitViewProps> = ({
       </div>
 
       {/* DRAGGABLE RESIZER & CENTER CONTROLS */}
-      <div 
-        className={`bg-surface flex ${
-          isHorizontal 
-            ? 'flex-col w-9 justify-center items-center py-2 border-x border-border' 
+      <div
+        className={`bg-surface flex ${isHorizontal
+            ? 'flex-col w-9 justify-center items-center py-2 border-x border-border'
             : 'flex-row h-8 justify-center items-center px-2 border-y border-border'
-        } gap-1 z-20 shrink-0 select-none shadow-xs relative`}
+          } gap-1 z-20 shrink-0 select-none shadow-xs relative`}
       >
         {/* Drag handle line on the divider border */}
         <div
           onMouseDown={handleMouseDown}
           onDoubleClick={handleResetRatio}
-          className={`absolute ${
-            isHorizontal 
-              ? 'inset-y-0 -left-1.5 -right-1.5 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40' 
+          className={`absolute ${isHorizontal
+              ? 'inset-y-0 -left-1.5 -right-1.5 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40'
               : 'inset-x-0 -top-1.5 -bottom-1.5 cursor-row-resize hover:bg-blue-500/20 active:bg-blue-500/40'
-          } z-30 flex items-center justify-center transition-colors`}
+            } z-30 flex items-center justify-center transition-colors`}
           title="Kéo sang trái/phải để thu hẹp hoặc mở rộng view (Double click để chia đều 50/50)"
         >
           {isHorizontal ? (
@@ -380,7 +431,7 @@ export const SplitView: React.FC<SplitViewProps> = ({
       </div>
 
       {/* RIGHT PANE */}
-      <div 
+      <div
         style={isHorizontal ? { width: `${100 - splitRatio}%` } : { height: `${100 - splitRatio}%` }}
         className="flex flex-col min-w-0 min-h-0 overflow-hidden"
       >
@@ -390,22 +441,20 @@ export const SplitView: React.FC<SplitViewProps> = ({
           <div className="flex items-center bg-surface-hover rounded p-0.5 border border-border text-[11px]">
             <button
               onClick={() => onChangeRightLanguage('json')}
-              className={`px-1.5 py-0.5 rounded flex items-center gap-1 ${
-                rightLanguage === 'json'
+              className={`px-1.5 py-0.5 rounded flex items-center gap-1 ${rightLanguage === 'json'
                   ? 'bg-background text-amber-500 font-semibold shadow-xs'
                   : 'text-fg-secondary hover:text-foreground'
-              }`}
+                }`}
               title="Chuyển bên phải sang JSON"
             >
               <FileJson size={11} /> JSON
             </button>
             <button
               onClick={() => onChangeRightLanguage('xml')}
-              className={`px-1.5 py-0.5 rounded flex items-center gap-1 ${
-                rightLanguage === 'xml'
+              className={`px-1.5 py-0.5 rounded flex items-center gap-1 ${rightLanguage === 'xml'
                   ? 'bg-background text-emerald-500 font-semibold shadow-xs'
                   : 'text-fg-secondary hover:text-foreground'
-              }`}
+                }`}
               title="Chuyển bên phải sang XML"
             >
               <FileCode size={11} /> XML
@@ -453,9 +502,9 @@ export const SplitView: React.FC<SplitViewProps> = ({
           <Editor
             height="100%"
             language={rightLanguage}
-            value={rightContent}
+            defaultValue={rightContent}
             theme={theme === 'dark' ? 'vs-dark' : 'light'}
-            onChange={(val) => onChangeRightContent(val || '')}
+            onChange={handleRightChange}
             onMount={handleRightMount}
             options={{
               fontSize,

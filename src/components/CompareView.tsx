@@ -59,7 +59,6 @@ export const CompareView: React.FC<CompareViewProps> = ({
       if (diffEditorRef.current) {
         diffEditorRef.current.getOriginalEditor().setValue(res.content);
       }
-      onNotify('Đã format bản Gốc (Trái)!', 'success');
     } else {
       onNotify(res.error || 'Lỗi format bản Gốc', 'error');
     }
@@ -73,7 +72,6 @@ export const CompareView: React.FC<CompareViewProps> = ({
       if (diffEditorRef.current) {
         diffEditorRef.current.getModifiedEditor().setValue(res.content);
       }
-      onNotify('Đã format bản So sánh (Phải)!', 'success');
     } else {
       onNotify(res.error || 'Lỗi format bản So sánh', 'error');
     }
