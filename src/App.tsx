@@ -9,6 +9,14 @@ import { SplitView } from './components/SplitView';
 import { Toast } from './components/Toast';
 import type { ToastMessage } from './components/Toast';
 import { HistoryModal } from './components/HistoryModal';
+import { ShareModal } from './components/ShareModal';
+import { 
+  createShareSnippet, 
+  getShareSnippet, 
+  updateShareSnippet, 
+  buildShareUrl, 
+  isFirebaseConfigured 
+} from './utils/firebase';
 import { 
   getHistory, 
   addHistoryItem, 
@@ -128,10 +136,82 @@ export const App: React.FC = () => {
     col?: number;
   }>({});
   const [toast, setToast] = useState<ToastMessage | null>(null);
+
+  // Notify utility
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info') => {
+    setToast({
+      id: Math.random().toString(),
+      message,
+      type,
+    });
+  }, []);
+
+
+
   const [history, setHistory] = useState<HistoryItem[]>(() => getHistory());
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
 
+  // Firebase Share state
+  const [isShareOpen, setIsShareOpen] = useState<boolean>(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [activeShareId, setActiveShareId] = useState<string | null>(() => {
+    return new URLSearchParams(window.location.search).get('s');
+  });
+  const [isShareLoading, setIsShareLoading] = useState<boolean>(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check URL query param for shared snippet (?s=...) on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shareId = params.get('s');
+    if (!shareId) return;
+
+    if (!isFirebaseConfigured()) {
+      setTimeout(() => {
+        showToast('Đang mở link chia sẻ nhưng chưa có Firebase API Key trong .env', 'info');
+      }, 0);
+      return;
+    }
+
+    const loadSharedContent = async () => {
+      try {
+        setIsShareLoading(true);
+        const { snippet, expired } = await getShareSnippet(shareId);
+        if (expired) {
+          showToast('⚠️ Liên kết chia sẻ này đã hết hạn sau 7 ngày!', 'error');
+          return;
+        }
+        if (!snippet) {
+          showToast('Không tìm thấy tài liệu chia sẻ này trên Firebase!', 'error');
+          return;
+        }
+
+        setActiveShareId(shareId);
+        setShareUrl(buildShareUrl(shareId));
+
+        const sharedTabId = `shared-${shareId}`;
+        const newTab: TabItem = {
+          id: sharedTabId,
+          title: snippet.title || `shared.${snippet.language}`,
+          type: 'editor',
+          language: snippet.language,
+          content: snippet.content,
+        };
+
+        setTabs((prev) => [newTab, ...prev.filter((t) => t.id !== sharedTabId)]);
+        setActiveTabId(sharedTabId);
+        showToast(`Đã mở tài liệu chia sẻ "${snippet.title}"!`, 'success');
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : 'Lỗi khi tải tài liệu chia sẻ';
+        showToast(errorMsg, 'error');
+      } finally {
+        setIsShareLoading(false);
+      }
+    };
+
+    loadSharedContent();
+  }, [showToast]);
 
   // Sync theme with document class
   useEffect(() => {
@@ -183,14 +263,7 @@ export const App: React.FC = () => {
   // Active tab reference
   const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
 
-  // Notify utility
-  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info') => {
-    setToast({
-      id: Math.random().toString(),
-      message,
-      type,
-    });
-  }, []);
+
 
   // Update content of active tab
   const handleContentChange = useCallback((newContent: string) => {
@@ -678,6 +751,65 @@ export const App: React.FC = () => {
     setHistory([]);
   }, []);
 
+  // Create a new share snippet on Firebase
+  const handleCreateNewShare = async () => {
+    if (!isFirebaseConfigured()) {
+      setIsShareOpen(true);
+      return;
+    }
+
+    const contentToShare =
+      activeTab.type === 'editor'
+        ? activeTab.content
+        : activeTab.modifiedContent || '';
+
+    if (!contentToShare.trim()) {
+      showToast('Nội dung đang trống, không thể chia sẻ!', 'error');
+      return;
+    }
+
+    try {
+      setIsShareLoading(true);
+      const res = await createShareSnippet({
+        content: contentToShare,
+        language: activeTab.language,
+        title: activeTab.title,
+      });
+
+      setActiveShareId(res.id);
+      setShareUrl(res.url);
+      window.history.replaceState({}, '', res.url);
+      setIsShareOpen(true);
+      showToast('✨ Đã tạo liên kết chia sẻ thành công!', 'success');
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Lỗi khi tạo liên kết chia sẻ';
+      showToast(errorMsg, 'error');
+    } finally {
+      setIsShareLoading(false);
+    }
+  };
+
+  // Update current active share snippet on Firebase
+  const handleUpdateExistingShare = async () => {
+    if (!activeShareId) return;
+
+    const contentToUpdate =
+      activeTab.type === 'editor'
+        ? activeTab.content
+        : activeTab.modifiedContent || '';
+
+    try {
+      setIsShareLoading(true);
+      await updateShareSnippet(activeShareId, contentToUpdate);
+      showToast('✨ Đã lưu cập nhật lên Firebase cho liên kết hiện tại!', 'success');
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Lỗi khi cập nhật lên Firebase';
+      showToast(errorMsg, 'error');
+    } finally {
+      setIsShareLoading(false);
+    }
+  };
+
   // Change language of current tab
   const handleLanguageChange = (lang: 'json' | 'xml') => {
     setTabs((prev) =>
@@ -727,6 +859,19 @@ export const App: React.FC = () => {
         onNotify={showToast}
       />
 
+      {/* Firebase Share Modal */}
+      <ShareModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        shareUrl={shareUrl}
+        activeShareId={activeShareId}
+        isLoading={isShareLoading}
+        isConfigured={isFirebaseConfigured()}
+        onCreateNewShare={handleCreateNewShare}
+        onUpdateExistingShare={handleUpdateExistingShare}
+        onNotify={showToast}
+      />
+
       {/* Hidden File Input for Upload */}
       <input
         ref={fileInputRef}
@@ -745,6 +890,13 @@ export const App: React.FC = () => {
         onOpenSplit={handleOpenSplit}
         onOpenHistory={() => setIsHistoryOpen(true)}
         historyCount={history.length}
+        onOpenShare={() => {
+          if (activeShareId && !shareUrl) {
+            setShareUrl(buildShareUrl(activeShareId));
+          }
+          setIsShareOpen(true);
+        }}
+        activeShareId={activeShareId}
       />
 
       {/* Tab Bar */}

@@ -7,7 +7,8 @@ import {
   FileJson, 
   FileCode,
   Columns,
-  History
+  History,
+  Share2
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -18,6 +19,8 @@ interface HeaderProps {
   onOpenSplit: () => void;
   onOpenHistory: () => void;
   historyCount: number;
+  onOpenShare: () => void;
+  activeShareId?: string | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -28,6 +31,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSplit,
   onOpenHistory,
   historyCount,
+  onOpenShare,
+  activeShareId,
 }) => {
   return (
     <header className="h-12 border-b border-border bg-surface px-4 flex items-center justify-between select-none">
@@ -107,6 +112,24 @@ export const Header: React.FC<HeaderProps> = ({
               {historyCount}
             </span>
           )}
+        </button>
+
+        {/* Share Button */}
+        <button
+          onClick={onOpenShare}
+          className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md transition-all shadow-xs active:scale-95 ${
+            activeShareId
+              ? 'bg-blue-600 hover:bg-blue-700 text-white font-semibold'
+              : 'hover:bg-surface-hover text-foreground border border-border'
+          }`}
+          title={
+            activeShareId
+              ? `Đang xem link chia sẻ (${activeShareId}) - Bấm để lưu hoặc quản lý`
+              : 'Chia sẻ tài liệu này lên mạng (Firebase)'
+          }
+        >
+          <Share2 size={14} className={activeShareId ? 'text-white' : 'text-blue-500'} />
+          <span>{activeShareId ? 'Chia sẻ (Đang mở)' : 'Chia sẻ'}</span>
         </button>
 
         <div className="h-4 w-px bg-border mx-1" />
